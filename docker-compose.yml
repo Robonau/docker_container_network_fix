@@ -1,6 +1,6 @@
 services:
   dockercontainernetworkfix:
-    image: ghcr.io/robonau/dockercontainernetworkfix
+    image: ghcr.io/robonau/docker_container_network_fix
     container_name: dockercontainernetworkfix
     restart: unless-stopped
     volumes:

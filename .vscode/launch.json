@@ -1,0 +1,48 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'docker_container_network_fix'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=docker_container_network_fix",
+                    "--package=docker_container_network_fix"
+                ],
+                "filter": {
+                    "name": "docker_container_network_fix",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "COMPOSE_STACKS_DIR": "/opt/stacks"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'docker_container_network_fix'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=docker_container_network_fix",
+                    "--package=docker_container_network_fix"
+                ],
+                "filter": {
+                    "name": "docker_container_network_fix",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

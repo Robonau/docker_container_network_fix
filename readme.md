@@ -1,6 +1,6 @@
 # docker container Network fix
 
-as it is named it helps with the vpn container network issue when updating the VPN container  
+as it is named it helps with the vpn container network issue when updating/recreating the VPN container  
 for example 
 ```yml
 services:
@@ -31,7 +31,7 @@ services:
             - /opt/stacks/watchtower/config.json:/config.json
 ```
 
-when watchtower automatically updates the gluetun container the qbittorrent container will loose network connection since it is still linked to the old gluetun container ID. Simply restarting the qbittorrent container wont fix this, it needs to be recreated from the compose.
+when watchtower automatically updates the gluetun container the qbittorrent container will loose network connection since it is still linked to the old gluetun container ID. Simply restarting the qbittorrent container wont fix this, it needs to be recreated from the compose. (this isnt actually an issue with watchtower as of [1429](https://github.com/containrrr/watchtower/pull/1429), bit is still an issue for manual recreating)
 
 what this does is when it finds a container that has a `networkHost:"container:{containerID}"` that doesn't exist anymore it recreates the container via the compose file that the container is apart of
 `docker compose -f {compose_yml} up -d --remove-orphans --force-recreate {service_name}`

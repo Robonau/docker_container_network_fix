@@ -1,7 +1,7 @@
 use async_process::{Command, Stdio};
 use bollard::{container::ListContainersOptions, secret::ContainerSummary, Docker};
 use futures_lite::{io::BufReader, prelude::*};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::path::Path;
 use tokio::time::interval;
@@ -27,15 +27,17 @@ async fn run() {
         .unwrap();
     let accessible_containers: Vec<&ContainerSummary> = all_containers
         .iter()
-        .filter(|container| match get_compose_yml(container) {
-            Some(compose_yml) => {
-                let compose_yml = Path::new(&compose_yml);
-                let compose_stacks_dir =
-                    env::var("COMPOSE_STACKS_DIR").unwrap_or("/opt/stacks".to_string());
-                let compose_stacks_dir = Path::new(&compose_stacks_dir);
-                compose_yml.starts_with(compose_stacks_dir)
+        .filter(|container| {
+            match get_from_labels(container, "com.docker.compose.project.config_files") {
+                Some(compose_yml) => {
+                    let compose_yml = Path::new(&compose_yml);
+                    let compose_stacks_dir =
+                        env::var("COMPOSE_STACKS_DIR").unwrap_or("/opt/stacks".to_string());
+                    let compose_stacks_dir = Path::new(&compose_stacks_dir);
+                    compose_yml.starts_with(compose_stacks_dir)
+                }
+                None => false,
             }
-            None => false,
         })
         .collect();
 
@@ -59,22 +61,16 @@ async fn run() {
         })
         .collect();
 
-    let mut already_fixed: HashSet<String> = HashSet::new();
-
     for container in containers_to_fix {
-        let Some(compose_yml) = get_compose_yml(&container) else {
+        let Some(compose_yml) =
+            get_from_labels(&container, "com.docker.compose.project.config_files")
+        else {
             println!(
                 "failed to find compose dir for container: {}",
                 serde_json::to_string_pretty(container).unwrap()
             );
             continue;
         };
-
-        if already_fixed.contains(&compose_yml) {
-            continue;
-        } else {
-            already_fixed.insert(compose_yml.clone());
-        }
 
         match &container {
             ContainerSummary {
@@ -98,6 +94,10 @@ async fn run() {
             }
         }
 
+        let Some(container_name) = get_from_labels(container, "com.docker.compose.service") else {
+            continue;
+        };
+
         let Ok(mut child) = Command::new("docker")
             .arg("--log-level")
             .arg("ERROR")
@@ -108,6 +108,7 @@ async fn run() {
             .arg("-d")
             .arg("--remove-orphans")
             .arg("--force-recreate")
+            .arg(&container_name)
             .stdout(Stdio::piped())
             .spawn()
         else {
@@ -129,15 +130,9 @@ async fn run() {
     }
 }
 
-fn get_compose_yml(container: &ContainerSummary) -> Option<String> {
+fn get_from_labels<'a>(container: &'a ContainerSummary, key: &str) -> Option<&'a String> {
     let Some(labels) = &container.labels else {
         return None;
     };
-    labels.iter().find_map(|label| {
-        if label.0 == "com.docker.compose.project.config_files" {
-            Some(label.1.to_string())
-        } else {
-            None
-        }
-    })
+    labels.get(key)
 }
